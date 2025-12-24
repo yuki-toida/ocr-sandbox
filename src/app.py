@@ -10,25 +10,36 @@ from PIL import Image
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from ocr.config import BBOX_COLOR, BBOX_THICKNESS, DEFAULT_DEVICE, FONT_SCALE
-from ocr.yomitoku_wrapper import YomitokuOCR
+from ocr.config import (
+    BBOX_COLOR, BBOX_THICKNESS, DEFAULT_DEVICE, FONT_SCALE,
+    SUPPORTED_OCR_ENGINES, DEFAULT_OCR_ENGINE
+)
+from ocr.engine_factory import create_ocr_engine
 from utils.image_utils import cv2_to_pil, pil_to_cv2
 from visualization.bbox_drawer import draw_bounding_boxes
 
 
 @st.cache_resource
-def load_ocr_engine(device: str = DEFAULT_DEVICE) -> Optional[YomitokuOCR]:
+def load_ocr_engine(
+    engine_type: str = DEFAULT_OCR_ENGINE,
+    device: str = DEFAULT_DEVICE
+) -> Optional[Any]:
     """
     OCRエンジンを読み込み（キャッシュ）
 
     Args:
+        engine_type: "yomitoku" または "paddleocr"
         device: "cpu", "cuda", または "mps"
 
     Returns:
-        Optional[YomitokuOCR]: OCRエンジンインスタンス、失敗時はNone
+        Optional[Any]: OCRエンジンインスタンス、失敗時はNone
     """
     try:
-        return YomitokuOCR(device=device, visualize=True)
+        return create_ocr_engine(
+            engine_type=engine_type,
+            device=device,
+            visualize=True
+        )
     except Exception as e:
         st.error(f"OCRモデルの読み込みに失敗しました: {str(e)}")
         st.info("初回実行時はインターネット接続が必要です（モデルのダウンロード）")
@@ -100,6 +111,8 @@ def initialize_session_state() -> None:
         st.session_state.ocr_results = None
     if 'annotated_image' not in st.session_state:
         st.session_state.annotated_image = None
+    if 'selected_engine' not in st.session_state:
+        st.session_state.selected_engine = DEFAULT_OCR_ENGINE
 
 
 def get_confidence_emoji(confidence: float) -> str:
@@ -166,8 +179,11 @@ def execute_ocr(uploaded_file) -> None:
     try:
         image = Image.open(uploaded_file)
 
-        # OCRエンジンを読み込み
-        ocr_engine = load_ocr_engine(device=DEFAULT_DEVICE)
+        # 選択されたエンジンでOCRエンジンを読み込み
+        ocr_engine = load_ocr_engine(
+            engine_type=st.session_state.selected_engine,
+            device=DEFAULT_DEVICE
+        )
 
         if ocr_engine is None:
             st.error("OCRエンジンの初期化に失敗しました")
@@ -215,6 +231,14 @@ def main():
 
     # タイトル
     st.title("📄 OCR サンドボックス")
+
+    # OCRエンジン選択
+    st.session_state.selected_engine = st.selectbox(
+        "OCRエンジンを選択",
+        options=SUPPORTED_OCR_ENGINES,
+        index=SUPPORTED_OCR_ENGINES.index(st.session_state.selected_engine),
+        help="使用するOCRエンジンを選択してください"
+    )
 
     # ファイルアップローダー
     uploaded_file = st.file_uploader(
