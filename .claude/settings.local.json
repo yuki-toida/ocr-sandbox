@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/yuki.toida/Library/Python/3.9/bin/streamlit run:*)",
+      "Bash(pkill:*)",
+      "Bash(python3:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(brew:*)",
+      "Bash(python3.13:*)",
+      "Bash(source venv313/bin/activate:*)",
+      "Bash(pip install:*)",
+      "Bash(streamlit run:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}
