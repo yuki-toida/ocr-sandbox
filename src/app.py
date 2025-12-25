@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 from typing import Any, Dict, Optional
 
 import streamlit as st
@@ -113,6 +114,8 @@ def initialize_session_state() -> None:
         st.session_state.annotated_image = None
     if 'selected_engine' not in st.session_state:
         st.session_state.selected_engine = DEFAULT_OCR_ENGINE
+    if 'processing_time' not in st.session_state:
+        st.session_state.processing_time = None
 
 
 def get_confidence_emoji(confidence: float) -> str:
@@ -193,8 +196,11 @@ def execute_ocr(uploaded_file) -> None:
         # PIL画像をOpenCV形式に変換
         cv2_image = pil_to_cv2(image)
 
-        # OCR実行
+        # OCR実行（処理時間を測定）
+        start_time = time.time()
         results = ocr_engine.process_image(cv2_image)
+        end_time = time.time()
+        processing_time = end_time - start_time
 
         # バウンディングボックスを描画
         annotated_image = draw_bounding_boxes(
@@ -209,6 +215,7 @@ def execute_ocr(uploaded_file) -> None:
         # 結果をセッションステートに保存
         st.session_state.ocr_results = results
         st.session_state.annotated_image = cv2_to_pil(annotated_image)
+        st.session_state.processing_time = processing_time
 
         # 処理完了後フラグをリセットして画面を更新
         st.session_state.processing = False
@@ -280,6 +287,10 @@ def main():
         st.markdown("### 📝 認識されたテキスト")
 
         if st.session_state.ocr_results is not None:
+            # 処理時間を表示
+            if st.session_state.processing_time is not None:
+                st.info(f"⏱️ 処理時間: {st.session_state.processing_time:.3f} 秒")
+
             display_ocr_results(st.session_state.ocr_results)
 
     # OCR実行処理
